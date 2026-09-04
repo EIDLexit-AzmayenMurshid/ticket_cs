@@ -1,0 +1,7 @@
+{
+  "uid": "ticket_cs_sync_status_function",
+  "type": "app-function",
+  "config": {
+    "entrypoint": "/app/functions/TicketSyncStatusFunction.js"
+  }
+}

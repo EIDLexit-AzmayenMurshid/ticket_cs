@@ -16,13 +16,15 @@ interface CrmExtensionProps {
 
 // HubSpot mounts this extension inside the ticket record tab.
 hubspot.extend<'crm.record.tab'>(({ context, actions }: CrmExtensionProps) => (
-  <CrmExtension context={context} actions={actions} />
+  <CrmExtension context={ context } actions={ actions } />
 ));
 
 const CrmExtension = ({ context, actions }: CrmExtensionProps) => {
-  const contextData = context as unknown as Record<string, unknown>;
-  // HubSpot context shape can differ by runtime, so we support both common id fields.
-  const ticketId = String(contextData.objectId ?? contextData.recordId ?? '');
+  // HubSpot CRM card context provides the record ID via context.crm.objectId
+  const ticketId = String(
+    (context as unknown as Record<string, unknown>)?.crm?.objectId ?? '',
+  );
+  
   const { isLoading, isRefreshing, error, data, refresh } = useTicketSyncStatus(
     ticketId,
     actions,
@@ -48,4 +50,4 @@ const CrmExtension = ({ context, actions }: CrmExtensionProps) => {
       />
     </Box>
   );
-};
+}

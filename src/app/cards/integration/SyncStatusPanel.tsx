@@ -3,7 +3,6 @@ import {
   Button,
   DescriptionList,
   DescriptionListItem,
-  EmptyState,
   Heading,
   LoadingSpinner,
   StatusTag,
@@ -105,18 +104,6 @@ export function SyncStatusPanel({
           </Button>
         </>
       ) : null}
-
-      {/* Always-visible implementation hint for external integrators. */}
-      <EmptyState
-        title="Ingestion Endpoint"
-        layout="vertical"
-      >
-        <Text>
-          External systems should send POST requests to{' '}
-          /integration/tickets/ingest with an ingest token and payload mapping fields
-          (subject, content, priority, stage, owner, external ticket ID, source system).
-        </Text>
-      </EmptyState>
     </>
   );
 }
