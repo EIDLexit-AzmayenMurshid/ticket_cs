@@ -14,3 +14,5 @@ dist/
 build/
 coverage/
 .nyc_output/
+TODO.md
+*.md

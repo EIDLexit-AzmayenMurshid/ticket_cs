@@ -1,66 +1,56 @@
-const { PROPERTY_KEYS } = require('./lib/constants');
-const {
-  getHubSpotToken,
-  classifyHubSpotFailure,
-  hubspotRequest,
-} = require('./lib/hubspot-client');
-const { send, resolveTicketId } = require('./lib/http-utils');
+const { Client } = require('@hubspot/api-client');
 
-exports.main = async (context = {}, sendResponse) => {
-  // Shared HubSpot API token for reading ticket and integration fields.
-  const token = getHubSpotToken();
-  if (!token) {
-    send(sendResponse, 500, {
-      success: false,
-      error:
-        'Missing HubSpot token. Set HUBSPOT_PRIVATE_APP_TOKEN (or HUBSPOT_ACCESS_TOKEN/PRIVATE_APP_TOKEN).',
-    });
-    return;
-  }
+// Property keys for custom integration properties
+const PROPERTY_KEYS = {
+  externalTicketId: process.env.EXTERNAL_TICKET_ID_PROPERTY || 'external_ticket_id',
+  sourceSystem: process.env.SOURCE_SYSTEM_PROPERTY || 'source_system',
+  syncStatus: process.env.SYNC_STATUS_PROPERTY || 'external_sync_status',
+  lastSyncAt: process.env.LAST_SYNC_AT_PROPERTY || 'external_last_sync_at',
+  lastSyncResult: process.env.LAST_SYNC_RESULT_PROPERTY || 'external_last_sync_result',
+  lastWebhookEventId:
+    process.env.LAST_WEBHOOK_EVENT_ID_PROPERTY || 'external_last_webhook_event_id',
+};
 
-  // Ticket id can come from explicit parameters or HubSpot context payload.
-  const ticketId = resolveTicketId(context);
-  if (!ticketId) {
-    send(sendResponse, 400, {
-      success: false,
-      error: 'Missing ticketId parameter for sync status lookup.',
-    });
-    return;
-  }
-
-  // Includes both native ticket fields and custom integration status fields.
-  const propertiesToFetch = [
-    'subject',
-    'content',
-    'hs_ticket_priority',
-    'hs_pipeline',
-    'hs_pipeline_stage',
-    'hubspot_owner_id',
-    PROPERTY_KEYS.externalTicketId,
-    PROPERTY_KEYS.sourceSystem,
-    PROPERTY_KEYS.syncStatus,
-    PROPERTY_KEYS.lastSyncAt,
-    PROPERTY_KEYS.lastSyncResult,
-    PROPERTY_KEYS.lastWebhookEventId,
-  ];
-
+exports.main = async (context = {}) => {
   try {
-    // Build query with repeated properties parameters expected by HubSpot CRM API.
-    const query = new URLSearchParams();
-    propertiesToFetch.forEach((propertyName) => query.append('properties', propertyName));
+    // Get ticketId from context
+    const ticketId = context?.ticketId;
+    if (!ticketId) {
+      return {
+        success: false,
+        error: 'Missing ticketId parameter.',
+      };
+    }
 
-    const ticket = await hubspotRequest(
-      token,
-      `/crm/v3/objects/tickets/${ticketId}?${query.toString()}`,
+    // Create HubSpot client using the app's authentication context
+    // (no token needed—runs in the app's auth context automatically)
+    const hubspotClient = new Client();
+    
+    // Includes both native ticket fields and custom integration status fields.
+    const propertiesToFetch = [
+      'subject',
+      'content',
+      'hs_ticket_priority',
+      'hs_pipeline',
+      'hs_pipeline_stage',
+      'hubspot_owner_id',
+      PROPERTY_KEYS.externalTicketId,
+      PROPERTY_KEYS.sourceSystem,
+      PROPERTY_KEYS.syncStatus,
+      PROPERTY_KEYS.lastSyncAt,
+      PROPERTY_KEYS.lastSyncResult,
+      PROPERTY_KEYS.lastWebhookEventId,
+    ];
+
+    // Fetch ticket with all properties
+    const ticket = await hubspotClient.crm.tickets.basicApi.getById(
+      ticketId,
+      propertiesToFetch
     );
 
     const properties = ticket?.properties || {};
-    // Undefined properties usually mean missing custom mapping configuration.
-    const missingMappings = Object.values(PROPERTY_KEYS).filter(
-      (key) => properties[key] === undefined,
-    );
 
-    send(sendResponse, 200, {
+    return {
       success: true,
       ticketId,
       syncStatus: properties[PROPERTY_KEYS.syncStatus] || 'not_synced',
@@ -74,14 +64,12 @@ exports.main = async (context = {}, sendResponse) => {
       pipeline: properties.hs_pipeline || null,
       stage: properties.hs_pipeline_stage || null,
       ownerId: properties.hubspot_owner_id || null,
-      missingMappings,
-    });
+    };
   } catch (error) {
-    const classified = classifyHubSpotFailure(error);
-    send(sendResponse, classified.statusCode, {
+    console.error('Ticket sync status error:', error?.message);
+    return {
       success: false,
-      error: classified.message,
-      details: error?.response || error?.message || 'unknown error',
-    });
+      error: error?.message || 'Failed to fetch ticket sync status',
+    };
   }
 };

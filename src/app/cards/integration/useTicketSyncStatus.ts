@@ -1,7 +1,7 @@
 import { hubspot, logger } from '@hubspot/ui-extensions';
 import type { ExtensionPointApiActions } from '@hubspot/ui-extensions';
 import { useCallback, useEffect, useState } from 'react';
-import type { SyncState, SyncStatusResponse } from './types.js';
+import type { SyncState } from './types.js';
 
 // Fetches ticket sync data from a private HubSpot function and exposes UI-friendly state.
 export function useTicketSyncStatus(
@@ -37,23 +37,16 @@ export function useTicketSyncStatus(
       }));
 
       try {
-        // Calls the private app-function by uid, not an external HTTP endpoint.
-        const response = await hubspot.serverless<SyncStatusResponse>(
-          'ticket_cs_sync_status_function',
-          {
-            parameters: { ticketId },
-          },
-        );
-
-        if (!response?.success) {
-          throw new Error(response?.error || 'Sync status endpoint did not return success.');
-        }
+        // Call the private app function
+        const result = await hubspot.serverless('ticket_cs_sync_status_function', {
+          ticketId,
+        });
 
         setState({
           isLoading: false,
           isRefreshing: false,
           error: null,
-          data: response,
+          data: result,
         });
 
         if (refreshOnly && actions?.addAlert) {
