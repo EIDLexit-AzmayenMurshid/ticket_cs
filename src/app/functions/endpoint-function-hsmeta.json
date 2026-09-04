@@ -1,0 +1,19 @@
+{
+  "uid": "ticket_cs_ingest_endpoint",
+  "type": "app-function",
+  "config": {
+    "entrypoint": "/app/functions/TicketIngestEndpoint.js",
+    "endpoint": {
+      "path": "/integration/tickets/ingest",
+      "methods": [
+        "POST"
+      ]
+    },
+    "secretKeys": [
+      "INTEGRATION_INGEST_TOKEN",
+      "HUBSPOT_PRIVATE_APP_TOKEN",
+      "RATE_LIMIT_MAX_TOKENS",
+      "RATE_LIMIT_WINDOW_SECONDS"
+    ]
+  }
+}

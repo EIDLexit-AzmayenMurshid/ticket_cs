@@ -1,0 +1,12 @@
+{
+  "uid": "ticket_cs_card",
+  "type": "card",
+  "config": {
+    "name": "External Ticket Card",
+    "location": "crm.record.tab",
+    "entrypoint": "/app/cards/TicketIntegrationCard.tsx",
+    "objectTypes": [
+      "tickets"
+    ]
+  }
+}
